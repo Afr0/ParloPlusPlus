@@ -1,0 +1,10 @@
+
+*.obj
+*.tlog
+/vcpkg_installed
+*.log
+*.recipe
+*.pch
+*.filters
+*.user
+x64/Debug/Parlo++.vcxproj.FileListAbsolute.txt

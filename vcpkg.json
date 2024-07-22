@@ -1,0 +1,9 @@
+{
+  "name": "parloplusplus",
+  "version": "1.0",
+  "dependencies": [
+    "asio",
+    "cryptopp",
+    "zlib"
+  ]
+}
