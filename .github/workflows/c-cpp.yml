@@ -1,0 +1,39 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Clang
+      run: sudo apt-get install -y clang
+
+    - name: Set up CMake
+      uses: jwlawson/actions-setup-cmake@v1
+      with:
+        version: '3.19.0'  # Specify the CMake version you need
+
+    - name: Install dependencies
+      run: sudo apt-get install -y build-essential
+
+    - name: Create build directory
+      run: mkdir build
+
+    - name: Configure CMake
+      run: cmake -S . -B build -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+
+    - name: Build
+      run: cmake --build build
+
+    - name: Run tests
+      run: ctest --output-on-failure -C Debug -T test -j $(nproc)
