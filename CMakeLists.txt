@@ -1,13 +1,18 @@
 cmake_minimum_required(VERSION 3.10)
 
-#Set the project name and version
+# Set the project name and version
 project(ParloPlusPlus VERSION 1.0)
 
-#Specify the C++ standard
+# Specify the C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-#Add the source files
+# Include vcpkg toolchain file
+if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
+  set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
+endif()
+
+# Add the source files
 set(SOURCES
     NetworkClient.cpp
     Listener.cpp
@@ -15,7 +20,7 @@ set(SOURCES
     # Add other source files here
 )
 
-#Add the header files
+# Add the header files
 set(HEADERS
     NetworkClient.h
     Listener.h
@@ -28,11 +33,23 @@ set(HEADERS
     # Add other header files here
 )
 
-#Add the library
+# Add the library
 add_library(ParloPlusPlus SHARED ${SOURCES} ${HEADERS})
 
-#Include directories
-target_include_directories(ParloPlusPlus PUBLIC .)
+# Include directories
+target_include_directories(ParloPlusPlus PRIVATE ${CMAKE_SOURCE_DIR})
 
-#Add any required libraries here
-# target_link_libraries(ParloPlusPlus <library>)
+# Link libraries with vcpkg
+find_package(asio CONFIG REQUIRED)
+find_package(cryptopp CONFIG REQUIRED)
+find_package(ZLIB REQUIRED)
+
+# Add any required libraries here
+target_link_libraries(ParloPlusPlus PRIVATE asio::asio cryptopp::cryptopp ZLIB::ZLIB)
+
+# Platform-specific libraries
+if (WIN32)
+    target_link_libraries(ParloPlusPlus PRIVATE ws2_32)
+elseif (UNIX)
+    target_link_libraries(ParloPlusPlus PRIVATE pthread)
+endif()

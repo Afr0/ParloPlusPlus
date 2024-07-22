@@ -7,30 +7,56 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build:
-
+  build-linux:
     runs-on: ubuntu-latest
-
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Install Clang
-      run: sudo apt-get install -y clang
-
-    - name: Set up CMake
-      uses: jwlawson/actions-setup-cmake@v1
-      with:
-        version: '3.19.0'  # Specify the CMake version you need
-
     - name: Install dependencies
-      run: sudo apt-get install -y build-essential
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake ninja-build
+        git clone https://github.com/microsoft/vcpkg.git
+        ./vcpkg/bootstrap-vcpkg.sh
+        ./vcpkg/vcpkg install
 
     - name: Create build directory
       run: mkdir build
 
     - name: Configure CMake
-      run: cmake -S . -B build -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+      run: cmake -S . -B build -G Ninja -DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake
+
+    - name: Build
+      run: cmake --build build
+
+    - name: Run tests
+      run: ctest --output-on-failure -C Debug -T test -j $(nproc)
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up MSVC
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: x64
+
+    - name: Install dependencies
+      run: |
+        choco install -y cmake
+        choco install -y ninja
+        git clone https://github.com/microsoft/vcpkg.git
+        .\vcpkg\bootstrap-vcpkg.bat
+        .\vcpkg\vcpkg.exe install
+
+    - name: Create build directory
+      run: mkdir build
+
+    - name: Configure CMake
+      run: cmake -S . -B build -G Ninja -DCMAKE_TOOLCHAIN_FILE=.\vcpkg\scripts\buildsystems\vcpkg.cmake
 
     - name: Build
       run: cmake --build build
