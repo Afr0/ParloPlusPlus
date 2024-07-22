@@ -167,6 +167,7 @@
     <ClInclude Include="EncryptedPacket.h" />
     <ClInclude Include="EncryptionArgs.h" />
     <ClInclude Include="EncryptionMode.h" />
+    <ClInclude Include="framework.h" />
     <ClInclude Include="GoodbyePacket.h" />
     <ClInclude Include="HeartbeatPacket.h" />
     <ClInclude Include="Listener.h" />
