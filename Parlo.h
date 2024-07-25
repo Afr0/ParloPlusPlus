@@ -17,9 +17,7 @@ Contributor(s): ______________________________________
 #include <asio.hpp>
 #include "Socket.h"
 #include "BlockingQueue.h"
-#include "Packet.h"
 #include "ProcessingBuffer.h"
-#include "HeartbeatPacket.h"
 #include "Logger.h"
 #include "ParloIDs.h"
 
@@ -33,6 +31,8 @@ namespace Parlo
 {
     class Listener; //Forward declaration
 
+    /*The NetworkClient class represents a NetworkClient that can connect to a remote endpoint and receive data.
+    It can also represent a connected client on the server side.*/
     class PARLO_API NetworkClient : public std::enable_shared_from_this<NetworkClient>
     {
     private:
@@ -114,6 +114,7 @@ namespace Parlo
         void setOnReceivedDataHandler(std::function<void(const std::shared_ptr<NetworkClient>&, const std::shared_ptr<Packet>&)> handler);
     };
 
+    /*A Listener is used to listen for incoming connections.*/
     class PARLO_API Listener
     {
     private:
@@ -142,5 +143,45 @@ namespace Parlo
 
         /*@returns A reference to this Listener's internal list of connected clients.*/
         BlockingQueue<std::shared_ptr<NetworkClient>>& Clients() { return networkClients; }
+    };
+
+    /*A packet is used to send data across a network.*/
+    class PARLO_API Packet
+    {
+    public:
+        //Default constructor to avoid warning about redefinition of Packet class.
+        Packet() = default;
+
+        /* Constructs a new Packet instance for TCP transmission.
+        @param id The ID of the packet.
+        @param serializedData The serialized data of the packet.
+        @param isPacketCompressed Is the packet compressed?*/
+        Packet(uint8_t id, const std::vector<uint8_t>& serializedData, bool isPacketCompressed = false);
+
+        /* Constructs a new Packet instance for UDP transmission.
+        @param id The ID of the packet.
+        @param serializedData The serialized data of the packet.
+        @param isPacketCompressed Is the packet compressed?
+        @param isPacketReliable Should this packet be transferred reliably?*/
+        Packet(uint8_t id, const std::vector<uint8_t>& serializedData, bool isPacketCompressed = false, bool isPacketReliable);
+
+        ~Packet() {}
+
+        uint8_t getID() const { return id; }
+        uint8_t getIsCompressed() const { return isCompressed; }
+        uint16_t getLength() const { return length; }
+        const std::vector<uint8_t>& getData() const { return data; }
+
+        std::vector<uint8_t> virtual buildPacket() const;
+
+    protected:
+        std::vector<uint8_t> data;
+
+    private:
+        uint8_t id;
+        uint8_t isCompressed;
+        uint8_t isReliable;
+        uint16_t length;
+        bool isUDP;
     };
 }
