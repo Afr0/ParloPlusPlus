@@ -13,6 +13,8 @@ Contributor(s): ______________________________________
 #include "pch.h"
 #include "NetworkClient.h"
 #include "Listener.h" //Avoid circular dependency by including it in cpp instead of header.
+#include "Packet.h"
+#include "HeartbeatPacket.h"
 
 namespace Parlo
 {

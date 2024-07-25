@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "ProcessingBuffer.h"
+#include "Packet.h"
 
 namespace Parlo
 {

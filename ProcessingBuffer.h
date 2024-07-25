@@ -23,11 +23,12 @@ Contributor(s): ______________________________________.
 #include <stdexcept>
 #include <functional>
 #include "PacketHeaders.h"
-#include "Packet.h"
 
 namespace Parlo
 {
     const int MAX_PACKET_SIZE = 1024;
+
+    class Packet;
 
     class ProcessingBuffer 
     {

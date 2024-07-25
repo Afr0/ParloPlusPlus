@@ -24,13 +24,13 @@ Contributor(s): ______________________________________
 #include "Logger.h"
 #include "Socket.h"
 #include "ProcessingBuffer.h"
-#include "HeartbeatPacket.h"
-#include "Packet.h"
 #include "ParloIDs.h"
 
 namespace Parlo
 {
+    class Packet;
     class Listener; //Forward declaration
+    class HeartbeatPacket;
 
     class NetworkClient : public std::enable_shared_from_this<NetworkClient> {
     public:
