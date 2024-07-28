@@ -16,27 +16,6 @@ Contributor(s): ______________________________________.
 #include <vector>
 #include <stdexcept>
 
-/*IDs used by internal packets.
-These IDs are reserved, I.E
-should not be used by a protocol.*/
-enum ParloIDs
-{
-    /// <summary>
-    /// The ID for a Heartbeat packet.
-    /// </summary>
-    Heartbeat = 0xFD,
-
-    /// <summary>
-    /// The ID for a Goodbye packet sent by a server.
-    /// </summary>
-    SGoodbye = 0xFE,
-
-    /// <summary>
-    /// The ID for a Goodbye packet sent by a client.
-    /// </summary>
-    CGoodbye = 0xFF //Should be sufficiently large, no protocol should need this many packets.
-};
-
 /*Number of seconds for server or client to disconnect by default.*/
 enum ParloDefaultTimeouts : int
 {
