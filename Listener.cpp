@@ -16,6 +16,9 @@ Contributor(s): ______________________________________.
 
 namespace Parlo
 {
+    /*Constructs a new Listener instance that listens for incoming connections.
+    @param context An asio::io_context instance.
+    @param endpoint The remote endpoint to connect to.*/
     Listener::Listener(asio::io_context& context, const asio::ip::tcp::endpoint& endpoint)
         : ioContext(context), acceptor(context, endpoint), listenerSocket(context)
     {

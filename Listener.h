@@ -41,6 +41,9 @@ namespace Parlo
 		void NewClient_OnClientDisconnected(const std::shared_ptr<NetworkClient>& client);
 		void NewClient_OnConnectionLost(const std::shared_ptr<NetworkClient>& client);
 	public:
+		/*Constructs a new Listener instance that listens for incoming connections.
+		@param context An asio::io_context instance.
+		@param endpoint The remote endpoint to connect to.*/
 		Listener(asio::io_context& context, const asio::ip::tcp::endpoint& endpoint);
 		~Listener();
 
