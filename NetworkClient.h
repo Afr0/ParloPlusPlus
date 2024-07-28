@@ -36,6 +36,11 @@ namespace Parlo
     public:
         NetworkClient(Socket& socket, Listener* listener, size_t maxPacketSize);
         ~NetworkClient() {};
+        /*Constructs a new NetworkClient instance for connecting to a server and receiving data.
+        * Use NetworkClient.connectAsync() to connect.
+        @param socket The socket used for receiving data.*/
+        NetworkClient(Socket& socket);
+
         ~NetworkClient() {
             if (!stopCheckMissedHeartbeats) {
                 stopCheckMissedHeartbeats = true;

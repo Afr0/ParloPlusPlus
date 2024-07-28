@@ -75,6 +75,57 @@ namespace Parlo
         receiveAsync();
     }
 
+    NetworkClient::NetworkClient(Socket& socket)
+        : socket(socket), listener(listener), processingBuffer()
+    {
+        processingBuffer.setOnPacketProcessedHandler([this](const Packet& packet) {
+            if (packet.getID() == ParloIDs::SGoodbye) { //Server notified client of disconnection.
+                if (onServerDisconnectedHandler)
+                    onServerDisconnectedHandler(shared_from_this());
+                return;
+            }
+            if (packet.getID() == ParloIDs::CGoodbye) { //Client notified server of disconnection.
+                if (onClientDisconnectedHandler)
+                    onClientDisconnectedHandler(shared_from_this());
+                return;
+            }
+            if (packet.getID() == ParloIDs::Heartbeat) {
+                std::lock_guard<std::mutex> aliveLock(aliveMutex);
+                isAlive = true;
+
+                //The std::lock_guard is a RAII (Resource Acquisition Is Initialization) type which 
+                //means it acquires the lock when it is created and releases it when it goes out of scope.
+                std::lock_guard<std::mutex> heartbeatsLock(heartbeatsMutex);
+                missedHeartbeats = 0;
+
+                auto data = std::make_shared<std::vector<uint8_t>>(packet.getData());
+                HeartbeatPacket Heartbeat = HeartbeatPacket::byteArrayToObject(data);
+
+                std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
+                std::chrono::system_clock::time_point sentTimestamp = Heartbeat.getSentTimestamp();
+                std::chrono::milliseconds timeSinceLast = Heartbeat.getTimeSinceLast();
+
+                auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - sentTimestamp);
+                lastRTT = static_cast<int>(duration.count() + timeSinceLast.count());
+
+                if (onReceivedHeartbeatHandler)
+                    onReceivedHeartbeatHandler(shared_from_this());
+
+                return;
+            }
+
+            if (packet.getIsCompressed()) {
+                auto decompressedData = decompressData(packet.getData());
+                if (onReceivedDataHandler)
+                    onReceivedDataHandler(shared_from_this(), std::make_shared<Packet>(packet.getID(), decompressedData, false));
+            }
+            else {
+                if (onReceivedDataHandler)
+                    onReceivedDataHandler(shared_from_this(), std::make_shared<Packet>(packet.getID(), packet.getData(), false));
+            }
+            });
+    }
+
     Socket* NetworkClient::getSocket() {
         return &socket;
     }
