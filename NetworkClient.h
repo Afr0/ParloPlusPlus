@@ -36,6 +36,20 @@ namespace Parlo
     public:
         NetworkClient(Socket& socket, Listener* listener, size_t maxPacketSize);
         ~NetworkClient() {};
+        ~NetworkClient() {
+            if (!stopCheckMissedHeartbeats) {
+                stopCheckMissedHeartbeats = true;
+                if (heartbeatCheckThread.joinable())
+                    heartbeatCheckThread.join();
+            }
+
+            if (!stopSendingHeartbeats) {
+                stopSendingHeartbeats = true;
+
+                if (sendHeartbeatsThread.joinable())
+                    sendHeartbeatsThread.join();
+            }
+        };
 
         Socket* getSocket();
 
@@ -85,6 +99,8 @@ namespace Parlo
         ProcessingBuffer processingBuffer;
         std::atomic<bool> connected{ true };
 
+        std::chrono::system_clock::time_point lastHeartbeatSent;
+
         /*Event fired when the server notified that it's disconnecting.*/
         std::function<void(const std::shared_ptr<NetworkClient>&)> onServerDisconnectedHandler;
         std::function<void(const std::shared_ptr<NetworkClient>&)> onClientDisconnectedHandler;
@@ -118,10 +134,14 @@ namespace Parlo
         @throws std::invalid_argument if data was null.*/
         std::vector<uint8_t> decompressData(const std::vector<uint8_t>& data);
 
+        /*Sends a heartbeat to the server. How often is determined by heartbeatInterval.*/
+        void sendHeartbeatAsync();
         std::thread sendHeartbeatsThread;
         /*Should we stop sending heartbeats? */
         std::atomic<bool> stopSendingHeartbeats = false;
 
+        /*Periodically checks for missed heartbeats. How often is determined by heartbeatInterval.*/
+        void checkForMissedHeartbeats();
         std::thread heartbeatCheckThread;
 
         std::mutex aliveMutex;
@@ -134,6 +154,11 @@ namespace Parlo
 
         /*Should we stop checking for missed heartbeats?*/
         std::atomic<bool> stopCheckMissedHeartbeats = false;
+
+        /*Maximum allowed number of missed hearbeats before connection is considered dead.*/
+        const int maxMissedHeartbeats = 6;
+        int heartbeatInterval = 30; //In seconds.
+
         /*The last RTT - I.E Round Trip Time, in millisecs.*/
         int lastRTT;
 

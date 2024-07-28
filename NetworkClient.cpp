@@ -69,6 +69,9 @@ namespace Parlo
             }
         });
 
+        heartbeatCheckThread = std::thread(&NetworkClient::checkForMissedHeartbeats, this);
+        sendHeartbeatsThread = std::thread(&NetworkClient::sendHeartbeatAsync, this);
+
         receiveAsync();
     }
 
@@ -288,14 +291,66 @@ namespace Parlo
         socket.connectAsync(endpoint, [this, self](std::error_code ec) {
             if (!ec) {
                 Logger::Log("Connected to server!", LogLevel::info);
+                
                 receiveAsync();
+                heartbeatCheckThread = std::thread(&NetworkClient::checkForMissedHeartbeats, this);
+                sendHeartbeatsThread = std::thread(&NetworkClient::sendHeartbeatAsync, this);
             }
             else {
                 Logger::Log("Error connecting to server: " + ec.message(), LogLevel::error);
                 if (onConnectionLostHandler)
                     onConnectionLostHandler(self);
             }
-            });
+        });
+    }
+
+    void NetworkClient::sendHeartbeatAsync()
+    {
+        while (!stopSendingHeartbeats)
+        {
+            try
+            {
+                HeartbeatPacket heartbeat((std::chrono::system_clock::now() > lastHeartbeatSent) ?
+                    std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - lastHeartbeatSent) : 
+                    std::chrono::duration_cast<std::chrono::milliseconds>(lastHeartbeatSent - std::chrono::system_clock::now()));
+                lastHeartbeatSent = std::chrono::system_clock::now();
+                auto heartbeatData = heartbeat.toByteArray();
+                Packet pulse((uint8_t)ParloIDs::Heartbeat, *heartbeatData, false);
+                sendAsync(pulse.buildPacket());
+            }
+            catch (const std::exception& e)
+            {
+                Logger::Log("Error sending heartbeat: " + std::string(e.what()), LogLevel::error);
+            }
+
+            std::this_thread::sleep_for(std::chrono::seconds(heartbeatInterval));
+        }
+    }
+
+    void NetworkClient::checkForMissedHeartbeats()
+    {
+        while (!stopCheckMissedHeartbeats)
+        {
+            std::this_thread::sleep_for(std::chrono::seconds(heartbeatInterval));
+
+            {
+                std::lock_guard<std::mutex> lock(heartbeatsMutex);
+                missedHeartbeats++;
+            }
+
+            if (missedHeartbeats > maxMissedHeartbeats)
+            {
+                {
+                    std::lock_guard<std::mutex> lock(aliveMutex);
+                    isAlive = false;
+                }
+
+                if (onConnectionLostHandler)
+                    onConnectionLostHandler(shared_from_this());
+            }
+        }
+    }
+
     /*Asynchronously disconnects from a remote endpoint.
     @param sendDisconnectMessage Whether or not to send a disconnection message to the other party. Defaults to true.*/
     void NetworkClient::disconnectAsync(bool sendDisconnectMessage)

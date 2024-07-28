@@ -21,21 +21,22 @@ namespace Parlo
     @param id The packet's id.
     @param serializedData The packet's data.
     @param isPacketCompressed Is the packet compressed?*/
-    HeartbeatPacket::HeartbeatPacket(uint8_t id, std::chrono::milliseconds timeSinceLast, const std::vector<uint8_t>& serializedData, bool isPacketCompressed)
-        : Packet(id, serializedData, isPacketCompressed), m_timeSinceLast(timeSinceLast), m_sentTimestamp(std::chrono::system_clock::now())
+    HeartbeatPacket::HeartbeatPacket(std::chrono::milliseconds tSinceLast)
     {
+        timeSinceLast = tSinceLast;
+        sentTimestamp = std::chrono::system_clock::now();
     }
 
     /*The timestamp for the elapsed time since the last Heartbeat packet was sent.*/
     std::chrono::milliseconds HeartbeatPacket::getTimeSinceLast() const
     {
-        return m_timeSinceLast;
+        return timeSinceLast;
     }
 
     /*The timestamp for when this Heartbeat packet was sent.*/
     std::chrono::system_clock::time_point HeartbeatPacket::getSentTimestamp() const
     {
-        return m_sentTimestamp;
+        return sentTimestamp;
     }
 
     /*Serializes a HeartbeatPacket instance into a byte array.
@@ -43,8 +44,8 @@ namespace Parlo
     std::shared_ptr<std::vector<uint8_t>> HeartbeatPacket::toByteArray() const
     {
         auto bytes = std::make_shared<std::vector<uint8_t>>(sizeof(int64_t) * 2);
-        int64_t timeSinceLastCount = m_timeSinceLast.count();
-        auto sentTimestampCount = std::chrono::duration_cast<std::chrono::milliseconds>(m_sentTimestamp.time_since_epoch()).count();
+        int64_t timeSinceLastCount = timeSinceLast.count();
+        auto sentTimestampCount = std::chrono::duration_cast<std::chrono::milliseconds>(sentTimestamp.time_since_epoch()).count();
 
         std::memcpy(bytes->data(), &timeSinceLastCount, sizeof(timeSinceLastCount));
         std::memcpy(bytes->data() + sizeof(timeSinceLastCount), &sentTimestampCount, sizeof(sentTimestampCount));
@@ -70,8 +71,8 @@ namespace Parlo
         auto sentTimestamp = std::chrono::system_clock::time_point(std::chrono::milliseconds(sentTimestampCount));
 
         std::vector<uint8_t> serializedData(arrBytes->begin(), arrBytes->end());
-        HeartbeatPacket packet(arrBytes->data()[0], timeSinceLast, serializedData, isPacketCompressed);
-        packet.m_sentTimestamp = sentTimestamp;
+        HeartbeatPacket packet(timeSinceLast);
+        packet.sentTimestamp = sentTimestamp;
         return packet;
     }
 }

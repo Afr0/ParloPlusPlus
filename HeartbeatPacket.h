@@ -16,14 +16,12 @@ Contributor(s): ______________________________________.
 #include <vector>
 #include <cstdint>
 #include <memory>
-#include "Packet.h"
 
 namespace Parlo
 {
-    class HeartbeatPacket : public Packet {
+    class HeartbeatPacket {
     public:
-        HeartbeatPacket(uint8_t id, std::chrono::milliseconds timeSinceLast, const std::vector<uint8_t>& serializedData, 
-            bool isPacketCompressed = false);
+        HeartbeatPacket(std::chrono::milliseconds tSinceLast);
 
         /*The timestamp for the elapsed time since the last Heartbeat packet was sent.*/
         std::chrono::milliseconds getTimeSinceLast() const;
@@ -34,7 +32,7 @@ namespace Parlo
         static HeartbeatPacket byteArrayToObject(const std::shared_ptr<std::vector<uint8_t>>& arrBytes, bool isPacketCompressed = false);
 
     private:
-        std::chrono::milliseconds m_timeSinceLast;
-        std::chrono::system_clock::time_point m_sentTimestamp;
+        std::chrono::milliseconds timeSinceLast;
+        std::chrono::system_clock::time_point sentTimestamp;
     };
 }
