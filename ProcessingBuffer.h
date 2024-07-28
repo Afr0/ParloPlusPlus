@@ -39,7 +39,15 @@ namespace Parlo
         using PacketProcessedCallback = std::function<void(const Packet&)>;
         void setOnPacketProcessedHandler(PacketProcessedCallback callback);
        
+        /*
+        * Shovels shit (data) into the buffer.
+        * @param The data to add. Needs to be no bigger than MAX_PACKET_SIZE!
+        * @exception Throws std::overflow_error if data was larger than MAX_PACKET_SIZE.
+        */
         void addData(const std::vector<uint8_t>& data);
+
+        /*The length of the internal buffer.*/
+        int bufferCount();
 
     private:
         std::queue<uint8_t> internalBuffer;

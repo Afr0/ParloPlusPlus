@@ -32,6 +32,11 @@ namespace Parlo
         cv.notify_one();
     }
 
+    /*The length of the internal buffer.*/
+    int ProcessingBuffer::bufferCount() {
+        return internalBuffer.size();
+    }
+
     /*Processes packets.*/
 	void ProcessingBuffer::processPackets() {
         while (!stopProcessing)
