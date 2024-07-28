@@ -213,7 +213,7 @@ namespace Parlo
 
         std::vector<uint8_t> finalData;
 
-        if (shouldCompressData(data, 100 /*TODO: Calculate RTT*/)) {
+        if (shouldCompressData(data, lastRTT)) {
             auto compressedData = compressData(data);
             Packet *compressedPacket = new Packet(data[0], finalData, true);
             finalData = compressedPacket->buildPacket();
