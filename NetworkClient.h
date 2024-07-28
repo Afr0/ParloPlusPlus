@@ -34,8 +34,11 @@ namespace Parlo
 
     class NetworkClient : public std::enable_shared_from_this<NetworkClient> {
     public:
-        NetworkClient(Socket& socket, Listener* listener, size_t maxPacketSize);
-        ~NetworkClient() {};
+        /*Constructs a new NetworkClient instance for receiving data.
+        @param socket The socket used for receiving data.
+        @param listener A Listener instance.*/
+        NetworkClient(Socket& socket, Listener* listener);
+
         /*Constructs a new NetworkClient instance for connecting to a server and receiving data.
         * Use NetworkClient.connectAsync() to connect.
         @param socket The socket used for receiving data.*/
@@ -90,7 +93,6 @@ namespace Parlo
     private:
         Socket& socket;
         Listener* listener;
-        size_t maxPacketSize;
 
         /*Only packets larger than this many bytes will be compressed.
         Defaults to 1024 bytes, IE Parlo's max packet size.*/

@@ -19,8 +19,8 @@ Contributor(s): ______________________________________
 
 namespace Parlo
 {
-    NetworkClient::NetworkClient(Socket& socket, Listener* listener, size_t maxPacketSize)
-        : socket(socket), listener(listener), maxPacketSize(maxPacketSize), processingBuffer()
+    NetworkClient::NetworkClient(Socket& socket, Listener* listener)
+        : socket(socket), listener(listener), processingBuffer()
     {
         processingBuffer.setOnPacketProcessedHandler([this](const Packet& packet) {
             if (packet.getID() == ParloIDs::SGoodbye) { //Server notified client of disconnection.

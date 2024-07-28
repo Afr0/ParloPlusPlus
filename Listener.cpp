@@ -47,8 +47,7 @@ namespace Parlo
                         //Create new client
                         auto newClient = std::make_shared<NetworkClient>(
                             acceptedSocket,
-                            this,
-                            MAX_PACKET_SIZE
+                            this
                         );
 
                         //Set up event handlers
