@@ -64,6 +64,10 @@ namespace Parlo
         @param endpoint The remote endpoint to connect to.*/
         void connectAsync(const asio::ip::tcp::endpoint endpoint);
 
+        /*Asynchronously disconnects from a remote endpoint.
+        @param sendDisconnectMessage Whether or not to send a disconnection message to the other party. Defaults to true.*/
+        void disconnectAsync(bool sendDisconnectMessage = true);
+
     private:
         Socket& socket;
         Listener* listener;
@@ -114,6 +118,12 @@ namespace Parlo
         @throws std::invalid_argument if data was null.*/
         std::vector<uint8_t> decompressData(const std::vector<uint8_t>& data);
 
+        std::thread sendHeartbeatsThread;
+        /*Should we stop sending heartbeats? */
+        std::atomic<bool> stopSendingHeartbeats = false;
+
+        std::thread heartbeatCheckThread;
+
         std::mutex aliveMutex;
         /*Is this client's connection still alive?*/
         std::atomic<bool> isAlive = true;
@@ -122,6 +132,8 @@ namespace Parlo
         /*How many missed heartbeats do we have?*/
         std::atomic<int> missedHeartbeats = 0;
 
+        /*Should we stop checking for missed heartbeats?*/
+        std::atomic<bool> stopCheckMissedHeartbeats = false;
         /*The last RTT - I.E Round Trip Time, in millisecs.*/
         int lastRTT;
 

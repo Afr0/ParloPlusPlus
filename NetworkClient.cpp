@@ -15,6 +15,7 @@ Contributor(s): ______________________________________
 #include "Listener.h" //Avoid circular dependency by including it in cpp instead of header.
 #include "Packet.h"
 #include "HeartbeatPacket.h"
+#include "GoodbyePacket.h"
 
 namespace Parlo
 {
@@ -295,5 +296,52 @@ namespace Parlo
                     onConnectionLostHandler(self);
             }
             });
+    /*Asynchronously disconnects from a remote endpoint.
+    @param sendDisconnectMessage Whether or not to send a disconnection message to the other party. Defaults to true.*/
+    void NetworkClient::disconnectAsync(bool sendDisconnectMessage)
+    {
+        try
+        {
+            if (connected && socket.isOpen())
+            {
+                if (sendDisconnectMessage)
+                {
+                    GoodbyePacket byePacket((int)ParloDefaultTimeouts::Client);
+                    std::vector<uint8_t> byeData = byePacket.toByteArray();
+                    Packet goodbye((uint8_t)ParloIDs::CGoodbye, byeData, false);
+                    sendAsync(goodbye.buildPacket());
+                }
+
+                if (socket.isOpen())
+                {
+                    //Shutdown both send and receive operations and close the socket
+                    socket.shutdown();
+                    socket.close();
+                }
+
+                if (!stopCheckMissedHeartbeats) {
+                    stopCheckMissedHeartbeats = true;
+                    if (heartbeatCheckThread.joinable())
+                        heartbeatCheckThread.join();
+                }
+
+                if (!stopSendingHeartbeats) {
+                    stopSendingHeartbeats = true;
+
+                    if (sendHeartbeatsThread.joinable())
+                        sendHeartbeatsThread.join();
+                }
+
+                connected = false;
+            }
+        }
+        catch (const asio::system_error& e)
+        {
+            Logger::Log("Exception during NetworkClient::disconnectAsync(): " + std::string(e.what()), LogLevel::error);
+        }
+        catch (const std::exception& e)
+        {
+            Logger::Log("Exception during NetworkClient::disconnectAsync(): " + std::string(e.what()), LogLevel::error);
+        }
     }
 }
