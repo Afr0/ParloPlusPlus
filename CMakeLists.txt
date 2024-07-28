@@ -14,14 +14,26 @@ endif()
 
 # Add the source files
 set(SOURCES
+    Logger.cpp
+    ProcessingBuffer.cpp
     NetworkClient.cpp
     Listener.cpp
     Socket.cpp
+    GoodbyePacket.cpp
+    HeartbeatPacket.cpp
     # Add other source files here
 )
 
 # Add the header files
 set(HEADERS
+    pch.h
+    framework.h
+    ParloIDs.h
+    EncryptionArgs.h
+    EncryptionMode.h
+    ProcessingBuffer.h
+    EncryptedPacket.h
+    Logger.h
     NetworkClient.h
     Listener.h
     Socket.h
@@ -30,6 +42,9 @@ set(HEADERS
     HeartbeatPacket.h
     Packet.h
     ParloIDs.h
+    Packet.h
+    GoodbyePacket.h
+    HeartbeatPacket.h
     # Add other header files here
 )
 
