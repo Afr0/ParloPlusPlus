@@ -34,6 +34,23 @@ namespace Parlo
         @param callback A callback function to be called when the connection attempt completes.*/
         void connectAsync(asio::ip::tcp::endpoint &endpoint, std::function<void(std::error_code)> callback);
 
+        /*Shuts down both send and receive operations on this Socket instance.*/
+        void shutdown();
+
+        /*Shuts down send operations on this Socket instance.*/
+        void shutdownSend();
+
+        /*Shuts down receive operations on this Socket instance.*/
+        void shutdownReceive();
+
+        /*Closes this Socket instance.*/
+        void close();
+
+        /*Is this socket still open?*/
+        bool isOpen();
+
+        asio::basic_socket<asio::ip::tcp, asio::any_io_executor>::native_handle_type nativeHandle();
+
     private:
         asio::ip::tcp::socket socket;
     };

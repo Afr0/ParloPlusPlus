@@ -36,4 +36,33 @@ namespace Parlo
             callback(ec);
         });
     }
+
+    /*Shuts down both send and receive operations on this Socket instance.*/
+    void Socket::shutdown() {
+        socket.shutdown(asio::ip::tcp::socket::shutdown_both);
+    }
+
+    /*Shuts down send operations on this Socket instance.*/
+    void Socket::shutdownSend() {
+        socket.shutdown(asio::ip::tcp::socket::shutdown_send);
+    }
+
+    /*Shuts down receive operations on this Socket instance.*/
+    void Socket::shutdownReceive() {
+        socket.shutdown(asio::ip::tcp::socket::shutdown_receive);
+    }
+
+    /*Closes this Socket instance.*/
+    void Socket::close() {
+        socket.close();
+    }
+
+    /*Returns the native handle for this Socket instance.*/
+    asio::basic_socket<asio::ip::tcp, asio::any_io_executor>::native_handle_type Socket::nativeHandle() {
+        return socket.native_handle();
+    }
+
+    bool Socket::isOpen() {
+        return socket.is_open();
+    }
 }
