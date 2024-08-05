@@ -15,8 +15,7 @@ Contributor(s): ______________________________________.
 #include <cstdint>
 #include <functional>
 #include <memory>
-#include "Packet.h"
-#include "NetworkClient.h"
+#include "Parlo.h"
 
 namespace Parlo 
 {

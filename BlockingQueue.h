@@ -6,6 +6,11 @@
 #include <optional>
 #include <limits>
 
+//Avoid issues with windows.h
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+
 template<typename T>
 class BlockingQueue {
 private:

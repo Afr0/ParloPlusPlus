@@ -21,6 +21,7 @@ set(SOURCES
     Socket.cpp
     GoodbyePacket.cpp
     HeartbeatPacket.cpp
+    Packet.cpp
     # Add other source files here
 )
 

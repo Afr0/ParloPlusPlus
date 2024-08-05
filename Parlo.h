@@ -2,186 +2,152 @@
 If a copy of the MPL was not distributed with this file, You can obtain one at
 http://mozilla.org/MPL/2.0/.
 
-The Original Code is the Parlo library.
+The Original Code is the Parlo Library.
 
 The Initial Developer of the Original Code is
 Mats 'Afr0' Vederhus. All Rights Reserved.
 
-Contributor(s): ______________________________________
+Contributor(s): ______________________________________.
 */
 
 #pragma once
 
 #include <memory>
 #include <vector>
-#include <asio.hpp>
-#include "Socket.h"
+#include <queue>
+#include <mutex>
+#include <condition_variable>
+#include <thread>
+#include <atomic>
+#include <chrono>
+#include <iostream>
+#include <stdexcept>
+#include <functional>
+#include "PacketHeaders.h"
 #include "BlockingQueue.h"
-#include "ProcessingBuffer.h"
-#include "Logger.h"
-#include "ParloIDs.h"
+#include <asio.hpp>
 
-#ifdef PARLO_EXPORTS
-#define PARLO_API __declspec(dllexport)
+#if defined(_WIN32) || defined(_WIN64)
+    #ifdef PARLO_EXPORTS
+        #define PARLO_API __declspec(dllexport)
+    #else
+        #define PARLO_API __declspec(dllimport)
+    #endif
 #else
-#define PARLO_API __declspec(dllimport)
+    #ifdef PARLO_EXPORTS
+        #define PARLO_API __attribute__((visibility("default")))
+    #else
+        #define PARLO_API
+    #endif
 #endif
+
+#define PARLO_TEMPLATE extern
 
 namespace Parlo
 {
     class Listener; //Forward declaration
+    class Socket;
 
-    /*The NetworkClient class represents a NetworkClient that can connect to a remote endpoint and receive data.
-    It can also represent a connected client on the server side.*/
-    class PARLO_API NetworkClient : public std::enable_shared_from_this<NetworkClient>
-    {
-    private:
-        Socket& socket;
-        Listener* listener;
-        size_t maxPacketSize;
-        bool applyCompression = false;
-
-        asio::streambuf recvBuffer;
-        ProcessingBuffer processingBuffer;
-        std::atomic<bool> connected{ true };
-
-        /*Event fired when the server notified that it's disconnecting.*/
-        std::function<void(const std::shared_ptr<NetworkClient>&)> onServerDisconnectedHandler;
-        std::function<void(const std::shared_ptr<NetworkClient>&)> onClientDisconnectedHandler;
-        std::function<void(const std::shared_ptr<NetworkClient>&)> onConnectionLostHandler;
-        std::function<void(const std::shared_ptr<NetworkClient>&)> onReceivedHeartbeatHandler;
-        std::function<void(const std::shared_ptr<NetworkClient>&, const std::shared_ptr<Packet>&)> onReceivedDataHandler;
-
-        static const int COMPRESSION_BUFFER_SIZE = 32768;
-
-        /*Asynchronously receives data from this NetworkClient's connected endpoint.*/
-        void receiveAsync();
-
-        /*Should data be compressed based on the RTT (Round Trip Time)?
-        @param data The data to consider.
-        @param rtt The round trip time.*/
-        bool shouldCompressData(const std::vector<uint8_t>& data, int rtt);
-
-        /*Compresses data.
-        @param data The data to compress.
-        @returns The compressed data as a std::vector<uint8_t>
-        @throws std::runtime_error if zLib couldn't be initialized or data couldn't be compressed.
-        @throws std::invalid_argument if data was null.*/
-        std::vector<uint8_t> compressData(const std::vector<uint8_t>& data);
-
-        /*Decompresses data.
-        @param data The data to compress.
-        @returns The decompressed data as a std::vector<uint8_t>
-        @throws std::runtime_error if zLib couldn't be initialized or data couldn't be decompressed.
-        @throws std::invalid_argument if data was null.*/
-        std::vector<uint8_t> decompressData(const std::vector<uint8_t>& data);
-
-        std::mutex aliveMutex;
-        /*Is this client's connection still alive?*/
-        std::atomic<bool> isAlive = true;
-
-        std::mutex heartbeatsMutex;
-        /*How many missed heartbeats do we have?*/
-        std::atomic<int> missedHeartbeats = 0;
-
-        /*The last RTT - I.E Round Trip Time, in millisecs.*/
-        int lastRTT;
-    public:
-        NetworkClient(Socket& socket, Listener* listener, size_t maxPacketSize);
-        ~NetworkClient() = default;
-
-        /*Asynchronously connects to a remote endpoint.
-        @param endpoint The remote endpoint to connect to.*/
-        void connectAsync(const asio::ip::tcp::endpoint endpoint);
-
-        /*Sends data asynchronously.
-        @param data The data to send.*/
-        void sendAsync(const std::vector<uint8_t>& data);
-
-        /*Sets a handler for the event fired when a client disconnects from a server. This handler should be set by a Listener instance.*/
-        void setOnClientDisconnectedHandler(std::function<void(const std::shared_ptr<NetworkClient>&)> handler);
-
-        /*Sets a handler for the event fired when this NetworkClient instance lost its connection.*/
-        void setOnConnectionLostHandler(std::function<void(const std::shared_ptr<NetworkClient>&)> handler);
-
-        /*Sets a handler for the event fired when a server disconnects.*/
-        void setOnServerDisconnectedHandler(std::function<void(const std::shared_ptr<NetworkClient>&)> handler);
-
-        /*Sets a handler for the event fired when a heartbeat was received.*/
-        void setOnReceivedHeartbeatHandler(std::function<void(const std::shared_ptr<NetworkClient>&)> handler);
-
-        /*Sets a handler for the event fired when data was received.*/
-        void setOnReceivedDataHandler(std::function<void(const std::shared_ptr<NetworkClient>&, const std::shared_ptr<Packet>&)> handler);
-    };
-
-    /*A Listener is used to listen for incoming connections.*/
-    class PARLO_API Listener
-    {
-    private:
-        asio::io_context& ioContext;
-        asio::ip::tcp::acceptor acceptor;
-        BlockingQueue<std::shared_ptr<NetworkClient>> networkClients;
-        std::atomic<bool> running{ false };
-        std::atomic<bool> applyCompression{ false };
-        std::future<void> acceptFuture;
-        Socket listenerSocket;
-
-        /*Asynchronously accepts new connections.*/
-        void acceptAsync();
-
-        void NewClient_OnClientConnected(std::error_code error, Socket& socket);
-        void NewClient_OnClientDisconnected(const std::shared_ptr<NetworkClient>& client);
-        void NewClient_OnConnectionLost(const std::shared_ptr<NetworkClient>& client);
-    public:
-        Listener(asio::io_context& context, const asio::ip::tcp::endpoint& endpoint);
-        ~Listener();
-
-        /*Starts accepting new connections.*/
-        void startAccepting();
-        /*Stops accepting new connections.*/
-        void stopAccepting();
-
-        /*@returns A reference to this Listener's internal list of connected clients.*/
-        BlockingQueue<std::shared_ptr<NetworkClient>>& Clients() { return networkClients; }
-    };
+    const int MAX_PACKET_SIZE = 1024;
 
     /*A packet is used to send data across a network.*/
-    class PARLO_API Packet
+    class Packet
     {
     public:
-        //Default constructor to avoid warning about redefinition of Packet class.
-        Packet() = default;
+        PARLO_API Packet(uint8_t id, const std::vector<uint8_t>& serializedData, bool isPacketCompressed = false);
+        PARLO_API Packet(uint8_t id, const std::vector<uint8_t>& serializedData, bool isPacketCompressed, bool isPacketReliable);
+        PARLO_API ~Packet();
 
-        /* Constructs a new Packet instance for TCP transmission.
-        @param id The ID of the packet.
-        @param serializedData The serialized data of the packet.
-        @param isPacketCompressed Is the packet compressed?*/
-        Packet(uint8_t id, const std::vector<uint8_t>& serializedData, bool isPacketCompressed = false);
+        PARLO_API uint8_t getID() const;
+        PARLO_API uint8_t getIsCompressed() const;
+        PARLO_API uint16_t getLength() const;
+        PARLO_API const std::vector<uint8_t>& getData() const;
 
-        /* Constructs a new Packet instance for UDP transmission.
-        @param id The ID of the packet.
-        @param serializedData The serialized data of the packet.
-        @param isPacketCompressed Is the packet compressed?
-        @param isPacketReliable Should this packet be transferred reliably?*/
-        Packet(uint8_t id, const std::vector<uint8_t>& serializedData, bool isPacketCompressed = false, bool isPacketReliable);
-
-        ~Packet() {}
-
-        uint8_t getID() const { return id; }
-        uint8_t getIsCompressed() const { return isCompressed; }
-        uint16_t getLength() const { return length; }
-        const std::vector<uint8_t>& getData() const { return data; }
-
-        std::vector<uint8_t> virtual buildPacket() const;
+        PARLO_API std::vector<uint8_t> buildPacket() const;
 
     protected:
         std::vector<uint8_t> data;
 
     private:
-        uint8_t id;
-        uint8_t isCompressed;
-        uint8_t isReliable;
-        uint16_t length;
-        bool isUDP;
+        class Impl;
+        std::unique_ptr<Impl> pImpl;
+    };
+
+    /*Buffer used to process incoming data. Only consumed by the Parlo tests library.*/
+    class ProcessingBuffer
+    {
+    public:
+        PARLO_API ProcessingBuffer();
+        PARLO_API ~ProcessingBuffer();
+
+        using PacketProcessedCallback = std::function<void(const Packet&)>;
+        PARLO_API void setOnPacketProcessedHandler(PacketProcessedCallback callback);
+
+        PARLO_API void addData(const std::vector<uint8_t>& data);
+
+        PARLO_API uint8_t operator[](size_t index) const;
+
+        PARLO_API size_t bufferCount() const;
+
+    private:
+        class Impl;
+        std::unique_ptr<Impl> pImpl;
+    };
+
+    /*The NetworkClient class represents a NetworkClient that can connect to a remote endpoint and receive data.*/
+    class NetworkClient : public std::enable_shared_from_this<NetworkClient>
+    {
+    private:
+        class Impl;
+        std::unique_ptr<Impl> pImpl;
+
+    public:
+        PARLO_API NetworkClient(Socket& socket, std::shared_ptr<Listener> listener);
+        PARLO_API NetworkClient(Socket& socket);
+        PARLO_API ~NetworkClient();
+
+        PARLO_API Socket* getSocket();
+
+        PARLO_API void connectAsync(const asio::ip::tcp::endpoint endpoint);
+        PARLO_API void sendAsync(const std::vector<uint8_t>& data);
+        
+        /*Asynchronously disconnects from a remote endpoint.
+        @param sendDisconnectMessage Whether or not to send a disconnection message to the other party. Defaults to true.*/
+        PARLO_API void disconnectAsync(bool sendDisconnectMessage = true);
+
+        PARLO_API void setApplyCompression(bool apply);
+
+        PARLO_API std::shared_ptr<NetworkClient> getSharedPtr() {
+            return shared_from_this();
+        }
+
+        void setOnClientDisconnectedHandler(std::function<void(const std::shared_ptr<NetworkClient>&)> handler);
+        void setOnConnectionLostHandler(std::function<void(const std::shared_ptr<NetworkClient>&)> handler);
+        void setOnServerDisconnectedHandler(std::function<void(const std::shared_ptr<NetworkClient>&)> handler);
+        void setOnReceivedHeartbeatHandler(std::function<void(const std::shared_ptr<NetworkClient>&)> handler);
+        void setOnReceivedDataHandler(std::function<void(const std::shared_ptr<NetworkClient>&, const std::shared_ptr<Packet>&)> handler);
+    };
+
+    /*A Listener is used to listen for incoming connections.*/
+    class Listener : public std::enable_shared_from_this<Listener>
+    {
+    public:
+        PARLO_API Listener(asio::io_context& context, const asio::ip::tcp::endpoint& endpoint);
+        PARLO_API ~Listener();
+
+        PARLO_API void startAccepting();
+        PARLO_API void stopAccepting();
+        PARLO_API BlockingQueue<std::shared_ptr<NetworkClient>>& clients();
+
+        void setApplyCompression(bool apply);
+
+        void setOnClientConnectedHandler(std::function<void(const std::shared_ptr<NetworkClient>&)> handler);
+
+        PARLO_API std::shared_ptr<Listener> getSharedPtr() {
+            return shared_from_this();
+        }
+    private:
+        class Impl;
+        std::unique_ptr<Impl> pImpl;
     };
 }

@@ -11,31 +11,98 @@ Contributor(s): ______________________________________.
 */
 
 #include "pch.h"
-#include "Listener.h"
-#include "NetworkClient.h"
+#include "BlockingQueue.h"
+#include "Parlo.h"
+#include "Logger.h"
+#include "Socket.h"
+#include <memory>
 
 namespace Parlo
 {
+    /*The Listener is used to accept incoming connections.*/
+    class Listener::Impl : public std::enable_shared_from_this<Impl> {
+        public:
+            Impl(asio::io_context& context, const asio::ip::tcp::endpoint& endpoint)
+                : ioContext(context), acceptor(context, endpoint), listenerSocket(context) {
+            }
+
+            /*Starts accepting new connections.*/
+            void startAccepting();
+            /*Stops accepting new connections.*/
+            void stopAccepting();
+
+            BlockingQueue<std::shared_ptr<NetworkClient>>& clients();
+
+            /*Sets a handler for the event fired when a client connected.*/
+            void setOnClientConnectedHandler(std::function<void(const std::shared_ptr<NetworkClient>&)> handler);
+
+            std::shared_ptr<Listener> getListenerSharedPtr() {
+                return owner->getSharedPtr();
+            }
+
+        private:
+            asio::io_context& ioContext;
+            asio::ip::tcp::acceptor acceptor;
+            BlockingQueue<std::shared_ptr<NetworkClient>> networkClients;
+            std::atomic<bool> running{ false };
+            std::atomic<bool> applyCompression{ false };
+            std::future<void> acceptFuture;
+            Socket listenerSocket;
+
+            using ClientConnectedHandler = std::function<void(const std::shared_ptr<NetworkClient>& client)>;
+            ClientConnectedHandler onClientConnected;
+
+            /*Asynchronously accepts new connections.*/
+            void acceptAsync();
+            void NewClient_OnClientConnected(const std::shared_ptr<NetworkClient>& client);
+
+            void NewClient_OnClientDisconnected(const std::shared_ptr<NetworkClient>& client);
+            void NewClient_OnConnectionLost(const std::shared_ptr<NetworkClient>& client);
+
+            void setApplyCompression(bool apply);
+
+            Listener* owner;
+
+            friend class Listener;
+    };
+
     /*Constructs a new Listener instance that listens for incoming connections.
     @param context An asio::io_context instance.
     @param endpoint The remote endpoint to connect to.*/
-    Listener::Listener(asio::io_context& context, const asio::ip::tcp::endpoint& endpoint)
-        : ioContext(context), acceptor(context, endpoint), listenerSocket(context)
-    {
-        //Use placeholders for std::error_code and Socket arguments.
-        onClientConnected = std::bind(&Listener::NewClient_OnClientConnected, this, std::placeholders::_1, std::placeholders::_2);
+    Listener::Listener(asio::io_context& context, const asio::ip::tcp::endpoint& endpoint) : 
+        pImpl(std::make_unique<Listener::Impl>(context, endpoint)) {
+        pImpl->owner = this;
     }
 
     Listener::~Listener() {
         stopAccepting();
     }
 
+    /*Starts accepting new connections.*/
+    void Listener::Impl::startAccepting()
+    {
+        running = true;
+        acceptFuture = std::async(std::launch::async, &Listener::Impl::acceptAsync, shared_from_this());
+    }
+
+    /*Stops accepting new connections.*/
+    void Listener::Impl::stopAccepting() {
+        running = false;
+
+        if (acceptFuture.valid())
+            acceptFuture.wait();
+
+        //Member objects' destructors are called automatically, so no need to invoke them.
+    }
+
+    BlockingQueue<std::shared_ptr<NetworkClient>>& Listener::Impl::clients() {
+        return networkClients;
+    }
+
     /*Asynchronously accepts new connections.*/
-	void Listener::acceptAsync() {
+    void Listener::Impl::acceptAsync() {
         try {
             while (running) {
-                if (running) 
-                    break;
 
                 listenerSocket.acceptAsync(acceptor, [this](std::error_code ec, Socket& acceptedSocket) {
                     if (!ec) {
@@ -47,7 +114,7 @@ namespace Parlo
                         //Create new client
                         auto newClient = std::make_shared<NetworkClient>(
                             acceptedSocket,
-                            this
+                            getListenerSharedPtr()//shared_from_this()
                         );
 
                         //Set up event handlers
@@ -68,7 +135,7 @@ namespace Parlo
                         networkClients.add(newClient);
 
                         if (onClientConnected)
-                            onClientConnected(ec, *newClient->getSocket());
+                            onClientConnected(newClient);
                     }
                     else
                         Logger::Log("Error accepting connection: " + ec.message(), LogLevel::error);
@@ -84,37 +151,50 @@ namespace Parlo
         catch (const std::exception& e) {
             Logger::Log("Exception in Listener::acceptAsync(): " + std::string(e.what()), LogLevel::error);
         }
-	}
+    }
 
-    /*Starts accepting new connections.*/
-	void Listener::startAccepting() {
-		running = true;
-		acceptFuture = std::async(std::launch::async, &Listener::acceptAsync, this);
-	}
-
-    /*Stops accepting new connections.*/
-	void Listener::stopAccepting() {
-		running = false;
-		if (acceptFuture.valid())
-			acceptFuture.wait();
-
-        //Member objects' destructors are called automatically, so no need to invoke them.
-	}
-
-    /*Should compression be applied to packets in incoming connections? Defaults to false.*/
-    void Listener::setApplyCompression(bool apply) {
+    /*Should compression be applied to packets in incoming connections? Defaults to false.
+    @param apply Apply compression? Defaults to false.*/
+    void Listener::Impl::setApplyCompression(bool apply) {
         applyCompression = apply;
     }
 
-    void Listener::NewClient_OnClientConnected(std::error_code error, Socket& socket) {
+    void Listener::Impl::setOnClientConnectedHandler(std::function<void(const std::shared_ptr<NetworkClient>&)> handler) {
+        onClientConnected = handler;
+    }
+
+    void Listener::Impl::NewClient_OnClientConnected(const std::shared_ptr<NetworkClient>& client) {
 
     }
 
-    void Listener::NewClient_OnClientDisconnected(const std::shared_ptr<NetworkClient>& client) {
+    void Listener::Impl::NewClient_OnClientDisconnected(const std::shared_ptr<NetworkClient>& client) {
         //Handle client disconnection
     }
 
-    void Listener::NewClient_OnConnectionLost(const std::shared_ptr<NetworkClient>& client) {
+    void Listener::Impl::NewClient_OnConnectionLost(const std::shared_ptr<NetworkClient>& client) {
         //Handle connection loss
+    }
+
+    void Listener::startAccepting() {
+        pImpl->startAccepting();
+    }
+
+    /*Stops accepting new connections.*/
+    void Listener::stopAccepting() {
+        pImpl->stopAccepting();
+    }
+
+    BlockingQueue<std::shared_ptr<NetworkClient>>& Listener::clients() {
+        return pImpl->clients();
+    }
+
+    /*Should compression be applied to packets in incoming connections? Defaults to false.
+    @param apply Apply compression? Defaults to false.*/
+    void Listener::setApplyCompression(bool apply) {
+        pImpl->setApplyCompression(apply);
+    }
+
+    void Listener::setOnClientConnectedHandler(std::function<void(const std::shared_ptr<NetworkClient>&)> handler) {
+        pImpl->setOnClientConnectedHandler(handler);
     }
 }
