@@ -8,3 +8,6 @@
 *.filters
 *.user
 x64/Debug/Parlo++.vcxproj.FileListAbsolute.txt
+/x64
+/tests/x64
+/packages

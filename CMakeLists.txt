@@ -32,20 +32,15 @@ set(HEADERS
     ParloIDs.h
     EncryptionArgs.h
     EncryptionMode.h
-    ProcessingBuffer.h
     EncryptedPacket.h
     Logger.h
-    NetworkClient.h
-    Listener.h
     Socket.h
     BlockingQueue.h
-    ProcessingBuffer.h
     HeartbeatPacket.h
-    Packet.h
-    ParloIDs.h
-    Packet.h
+    Parlo.h
     GoodbyePacket.h
     HeartbeatPacket.h
+    PacketHeaders.h
     # Add other header files here
 )
 
@@ -59,6 +54,18 @@ target_include_directories(ParloPlusPlus PRIVATE ${CMAKE_SOURCE_DIR})
 find_package(asio CONFIG REQUIRED)
 find_package(cryptopp CONFIG REQUIRED)
 find_package(ZLIB REQUIRED)
+
+# Add the test executable
+find_package(GTest CONFIG REQUIRED)
+add_executable(ProcessingBufferTests tests/ProcessingBufferTests.cpp)
+target_link_libraries(ProcessingBufferTests PRIVATE ParloPlusPlus GTest::gtest GTest::gtest_main)
+
+# Ensure the test executable can find the headers
+target_include_directories(ProcessingBufferTests PRIVATE ${CMAKE_SOURCE_DIR})
+
+# Add a test to CTest
+enable_testing()
+add_test(NAME ProcessingBufferTests COMMAND ProcessingBufferTests)
 
 # Add any required libraries here
 target_link_libraries(ParloPlusPlus PRIVATE asio::asio cryptopp::cryptopp ZLIB::ZLIB)

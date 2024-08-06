@@ -4,6 +4,7 @@
   "dependencies": [
     "asio",
     "cryptopp",
-    "zlib"
+    "zlib",
+    "gtest"
   ]
 }
