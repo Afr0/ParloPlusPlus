@@ -13,6 +13,12 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
+    - name: Cache vcpkg
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/vcpkg
+        key: ${{ runner.os }}-vcpkg-${{ hashFiles('vcpkg.json') }}
+
     - name: Install dependencies
       run: |
         sudo apt-get update
@@ -31,7 +37,9 @@ jobs:
       run: cmake --build build
 
     - name: Run tests
-      run: ctest --output-on-failure -C Debug -T test -j $(nproc)
+      run: |
+        cd build
+        ctest --output-on-failure -C Debug
 
   build-windows:
     runs-on: windows-latest
@@ -44,22 +52,31 @@ jobs:
       with:
         arch: x64
 
+    - name: Cache vcpkg
+      uses: actions/cache@v3
+      with:
+        path: C:\vcpkg\installed
+        key: ${{ runner.os }}-vcpkg-${{ hashFiles('vcpkg.json') }}
+
     - name: Install dependencies
       run: |
         choco install -y cmake
         choco install -y ninja
         git clone https://github.com/microsoft/vcpkg.git
         .\vcpkg\bootstrap-vcpkg.bat
+        .\vcpkg\vcpkg.exe integrate install
         .\vcpkg\vcpkg.exe install
 
     - name: Create build directory
       run: mkdir build
 
     - name: Configure CMake
-      run: cmake -S . -B build -G Ninja -DCMAKE_TOOLCHAIN_FILE=.\vcpkg\scripts\buildsystems\vcpkg.cmake
-
+      run: cmake -S . -B build -G Ninja -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}\\vcpkg\\scripts\\buildsystems\\vcpkg.cmake -DCMAKE_MAKE_PROGRAM=C:/ProgramData/chocolatey/lib/ninja/tools/ninja.exe -D_WIN32_WINNT=0x0601
+    
     - name: Build
       run: cmake --build build
 
     - name: Run tests
-      run: ctest --output-on-failure -C Debug -T test -j $(nproc)
+      run: |
+        cd build
+        ctest --output-on-failure -C Debug

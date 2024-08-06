@@ -47,6 +47,9 @@ set(HEADERS
 # Add the library
 add_library(ParloPlusPlus SHARED ${SOURCES} ${HEADERS})
 
+# Define PARLO_EXPORTS when building the library
+target_compile_definitions(ParloPlusPlus PRIVATE PARLO_EXPORTS)
+
 # Include directories
 target_include_directories(ParloPlusPlus PRIVATE ${CMAKE_SOURCE_DIR})
 
@@ -73,6 +76,7 @@ target_link_libraries(ParloPlusPlus PRIVATE asio::asio cryptopp::cryptopp ZLIB::
 # Platform-specific libraries
 if (WIN32)
     target_link_libraries(ParloPlusPlus PRIVATE ws2_32)
+    target_compile_definitions(ParloPlusPlus PRIVATE _WIN32_WINNT=0x0601)
 elseif (UNIX)
     target_link_libraries(ParloPlusPlus PRIVATE pthread)
 endif()
