@@ -1,10 +1,11 @@
 #pragma once
 
-#include <queue>
+#include <deque>
 #include <mutex>
 #include <condition_variable>
 #include <optional>
 #include <limits>
+#include <algorithm>
 
 //Avoid issues with windows.h
 #ifndef NOMINMAX
@@ -14,7 +15,7 @@
 template<typename T>
 class BlockingQueue {
 private:
-    std::queue<T> queue;
+    std::deque<T> queue;
     mutable std::mutex mutex;
     std::condition_variable notEmpty;
     std::condition_variable notFull;
@@ -31,7 +32,7 @@ public:
     void add(T item) {
         std::unique_lock<std::mutex> lock(mutex);
         notFull.wait(lock, [this]() { return queue.size() < capacity; });
-        queue.push(std::move(item));
+        queue.push_back(std::move(item));
         notEmpty.notify_one();
     }
 
@@ -60,6 +61,22 @@ public:
         notFull.notify_one();
 
         return item;
+    }
+
+    /*Takes a specific item from this BlockingQueue instance.
+    @param item The item to take.
+    @returns True if the item was removed, false otherwise.*/
+    bool take(const T& item) {
+        std::unique_lock<std::mutex> lock(mutex);
+        auto it = std::find(queue.begin(), queue.end(), item);
+
+        if (it != queue.end()) {
+            queue.erase(it);
+            notFull.notify_one();
+            return true;
+        }
+
+        return false;
     }
 
     /*The number of items in this BlockingQueue instance.*/
