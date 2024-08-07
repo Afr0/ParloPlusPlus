@@ -52,6 +52,9 @@ namespace Parlo
             using ClientConnectedHandler = std::function<void(const std::shared_ptr<NetworkClient>& client)>;
             ClientConnectedHandler onClientConnected;
 
+            using ClientDisconnectedHandler = std::function<void(const std::shared_ptr<NetworkClient>& client)>;
+            ClientDisconnectedHandler onClientDisconnected;
+
             /*Asynchronously accepts new connections.*/
             void acceptAsync();
             void NewClient_OnClientConnected(const std::shared_ptr<NetworkClient>& client);
@@ -169,10 +172,22 @@ namespace Parlo
 
     void Listener::Impl::NewClient_OnClientDisconnected(const std::shared_ptr<NetworkClient>& client) {
         //Handle client disconnection
+        Logger::Log("Client disconnected!", LogLevel::info);
+
+        if (onClientDisconnected)
+            onClientDisconnected(client);
+
+        networkClients.take(client);
     }
 
     void Listener::Impl::NewClient_OnConnectionLost(const std::shared_ptr<NetworkClient>& client) {
         //Handle connection loss
+        Logger::Log("Client connection lost!", LogLevel::info);
+
+        if (onClientDisconnected)
+            onClientDisconnected(client);
+
+        networkClients.take(client);
     }
 
     void Listener::startAccepting() {
