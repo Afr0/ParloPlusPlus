@@ -27,9 +27,14 @@ protected:
 /* Test for adding data to the processing buffer. */
 TEST_F(ProcessingBufferTests, TestAddingData) {
     std::cout << "Testing adding data to ProcessingBuffer..." << std::endl;;
+    uint16_t length = 9;
+
+    //Convert uint16_t length to two bytes in little-endian format
+    uint8_t lengthLow = static_cast<uint8_t>(length & 0xFF);
+    uint8_t lengthHigh = static_cast<uint8_t>((length >> 8) & 0xFF);
 
     Parlo::ProcessingBuffer processingBuffer;
-    std::vector<uint8_t> data = { 1, 2, 3, 4 };
+    std::vector<uint8_t> data = { 1, 2, lengthLow, lengthHigh };
     processingBuffer.addData(data);
     ASSERT_EQ(processingBuffer.bufferCount(), 4);
 

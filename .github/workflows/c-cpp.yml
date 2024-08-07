@@ -16,7 +16,11 @@ jobs:
     - name: Cache vcpkg
       uses: actions/cache@v3
       with:
-        path: ~/.cache/vcpkg
+        path: |
+          ~/.cache/vcpkg
+          !~/.cache/vcpkg/*/buildtrees
+          !~/.cache/vcpkg/*/packages
+          !~/.cache/vcpkg/*/downloads
         key: ${{ runner.os }}-vcpkg-${{ hashFiles('vcpkg.json') }}
 
     - name: Install dependencies
@@ -55,7 +59,9 @@ jobs:
     - name: Cache vcpkg
       uses: actions/cache@v3
       with:
-        path: C:\vcpkg\installed
+        path: |
+          D:\\a\\ParloPlusPlus\\ParloPlusPlus\\vcpkg_installed
+          D:\\a\\ParloPlusPlus\\ParloPlusPlus\\vcpkg/downloads
         key: ${{ runner.os }}-vcpkg-${{ hashFiles('vcpkg.json') }}
 
     - name: Install dependencies
