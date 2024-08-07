@@ -162,6 +162,8 @@ namespace Parlo
         applyCompression = apply;
     }
 
+    /*Set a function to be called when a client connects to this Listener instance.
+    @param handler The function to be called.*/
     void Listener::Impl::setOnClientConnectedHandler(std::function<void(const std::shared_ptr<NetworkClient>&)> handler) {
         onClientConnected = handler;
     }
@@ -170,6 +172,8 @@ namespace Parlo
 
     }
 
+    /*A client disconnected from this Listener instance.
+    @param client The client that disconnected.*/
     void Listener::Impl::NewClient_OnClientDisconnected(const std::shared_ptr<NetworkClient>& client) {
         //Handle client disconnection
         Logger::Log("Client disconnected!", LogLevel::info);
@@ -180,6 +184,8 @@ namespace Parlo
         networkClients.take(client);
     }
 
+    /*A client lost its connection to this Listener instance.
+    @param client The client that lost its connection.*/
     void Listener::Impl::NewClient_OnConnectionLost(const std::shared_ptr<NetworkClient>& client) {
         //Handle connection loss
         Logger::Log("Client connection lost!", LogLevel::info);
@@ -209,6 +215,8 @@ namespace Parlo
         pImpl->setApplyCompression(apply);
     }
 
+    /*Set a function to be called when a client connects to this Listener instance.
+    @param handler The function to be called.*/
     void Listener::setOnClientConnectedHandler(std::function<void(const std::shared_ptr<NetworkClient>&)> handler) {
         pImpl->setOnClientConnectedHandler(handler);
     }
