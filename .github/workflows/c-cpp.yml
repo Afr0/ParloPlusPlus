@@ -63,11 +63,16 @@ jobs:
           D:\\a\\ParloPlusPlus\\ParloPlusPlus\\vcpkg_installed
           D:\\a\\ParloPlusPlus\\ParloPlusPlus\\vcpkg/downloads
         key: ${{ runner.os }}-vcpkg-${{ hashFiles('vcpkg.json') }}
+        restore-keys: |
+          Windows-vcpkg-${{ runner.os }}-
 
     - name: Install dependencies
       run: |
         choco install -y cmake
         choco install -y ninja
+        if (Test-Path -Path ".\vcpkg") {
+          Remove-Item -Recurse -Force ".\vcpkg"
+        }
         git clone https://github.com/microsoft/vcpkg.git
         .\vcpkg\bootstrap-vcpkg.bat
         .\vcpkg\vcpkg.exe integrate install
