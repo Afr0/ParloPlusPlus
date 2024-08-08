@@ -61,7 +61,7 @@ jobs:
       with:
         path: |
           D:\\a\\ParloPlusPlus\\ParloPlusPlus\\vcpkg_installed
-          D:\\a\\ParloPlusPlus\\ParloPlusPlus\\vcpkg/downloads
+          D:\\a\\ParloPlusPlus\\ParloPlusPlus\\vcpkg\\downloads
         key: ${{ runner.os }}-vcpkg-${{ hashFiles('vcpkg.json') }}
         restore-keys: |
           Windows-vcpkg-${{ runner.os }}-
