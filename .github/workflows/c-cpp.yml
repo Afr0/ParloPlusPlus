@@ -79,11 +79,15 @@ jobs:
         .\vcpkg\vcpkg.exe integrate install
         .\vcpkg\vcpkg.exe install
 
+    - name: Set VCPKG_ROOT environment variable
+      run: |
+          echo "VCPKG_ROOT=D:\a\ParloPlusPlus\ParloPlusPlus\vcpkg" >> $env:GITHUB_ENV
+
     - name: Create build directory
       run: mkdir build
 
     - name: Configure CMake
-      run: cmake -S . -B build -G Ninja -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}\\vcpkg\\scripts\\buildsystems\\vcpkg.cmake -DCMAKE_MAKE_PROGRAM=C:/ProgramData/chocolatey/lib/ninja/tools/ninja.exe -D_WIN32_WINNT=0x0601 --vcpkg-root ${GITHUB_WORKSPACE}/vcpkg
+      run: cmake -S . -B build -G Ninja -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}\\vcpkg\\scripts\\buildsystems\\vcpkg.cmake -DCMAKE_MAKE_PROGRAM=C:/ProgramData/chocolatey/lib/ninja/tools/ninja.exe -D_WIN32_WINNT=0x0601
     
     - name: Build
       run: cmake --build build
